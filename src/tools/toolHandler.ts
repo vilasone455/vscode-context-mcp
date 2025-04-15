@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as schemas from "../schemas/index.js";
 import * as fileTools from "./fileTools.js";
 import * as vsCodeTools from "./vscodeTool.js";
+import * as commandTools from "./commandTool.js";
 
 
 const ToolInputSchema = ToolSchema.shape.inputSchema;
@@ -62,6 +63,15 @@ export function getToolsList() {
         "Shows the output and command history from the integrated terminal. " +
         "Helpful for understanding build errors, execution outputs, and previous commands.",
       inputSchema: zodToJsonSchema(schemas.TerminalContentArgsSchema) as ToolInput,
+    },
+    {
+      name: "run_command",
+      description:
+        "Execute a shell command in the system. " +
+        "Executes the specified command and returns stdout, stderr, and exit code. " +
+        "Requires a working directory path which must be a valid, allowed directory. " +
+        "Useful for performing system operations, gathering data, or automating tasks.",
+      inputSchema: zodToJsonSchema(schemas.RunCommandArgsSchema) as ToolInput,
     },
     {
       name: "read_file",
@@ -311,6 +321,28 @@ export async function handleToolCall(name: string, args: any) {
         const terminalContent = await vsCodeTools.getTerminalContent();
         return {
           content: [{ type: "text", text: JSON.stringify(terminalContent, null, 2) }],
+        };
+      }
+
+      case "run_command": {
+        const parsed = schemas.RunCommandArgsSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for run_command: ${parsed.error}`);
+        }
+        const result = await commandTools.runCommand(parsed.data.command, parsed.data.workingDir);
+        
+        let outputText = "";
+        if (result.stdout) {
+          outputText += `STDOUT:\n${result.stdout}\n\n`;
+        }
+        if (result.stderr) {
+          outputText += `STDERR:\n${result.stderr}\n\n`;
+        }
+        outputText += `Exit Code: ${result.exitCode}\n`;
+        
+        return {
+          content: [{ type: "text", text: outputText }],
+          isError: result.exitCode !== 0
         };
       }
 

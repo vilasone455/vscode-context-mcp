@@ -3,6 +3,12 @@ import { z } from "zod";
 export const InitChatArgsSchema = z.object({
 });
 
+// Command tools schema
+export const RunCommandArgsSchema = z.object({
+  command: z.string().describe('Command to execute in the shell'),
+  workingDir: z.string().describe('Working directory for command execution')
+});
+
 // VSCode tools schemas
 export const ProjectPathArgsSchema = z.object({});
 export const CurrentFileArgsSchema = z.object({});
