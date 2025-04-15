@@ -1,67 +1,118 @@
-# VS Code Context MCP Server
+# VSCode Context MCP
 
-A secure Model Context Protocol (MCP) server for connecting to VS Code and accessing the filesystem within designated allowed directories.
+A Model Context Protocol (MCP) server that provides VSCode context and filesystem operations for AI assistants.
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
 
-This project implements a secure filesystem access server using the Model Context Protocol (MCP). It allows tools and models to access the filesystem in a controlled manner, limiting access to explicitly allowed directories.
+VSCode Context MCP creates a bridge between AI assistants and your VSCode environment. It enables AI models to:
+
+1. Access the current VSCode context (active files, tabs, terminal output)
+2. Perform filesystem operations with controls
+3. Execute shell commands in a controlled environment
+
+This allows AI assistants to provide more relevant and context-aware help for software development tasks.
 
 ## Features
 
-- Secure filesystem access with directory restrictions
-- Support for reading, writing, and editing files
-- Directory operations (listing, creating, tree view)
-- File search capabilities
-- Secure path validation to prevent directory traversal attacks
-- Support for file diffing and editing
+### VSCode Context Access
+- Get current project path
+- Retrieve active file contents and metadata
+- List open editor tabs
+- Access diagnostic problems (warnings/errors)
+- Retrieve terminal output
 
-## Installation
+### Filesystem Operations
+- Read/write files
+- Edit files with line-based changes
+- Create directories
+- List directory contents
+- Generate directory trees
+- Search for files
+- Get file metadata
+- Move/rename files
 
-```bash
-npm install
-npm run build
-```
+### Command Execution
+- Run shell commands with output capture
+- Controlled execution environment
 
-## Usage
+## ⚠️ Security Warning
 
-```bash
-# Run the server with allowed directories
-node dist/index.js /path/to/allowed/directory [/another/allowed/directory]
-```
+**Be careful what you ask this server to run!** In Claude Desktop app, use `Approve Once` (not `Allow for This Chat`) so you can review each command, use `Deny` if you don't trust the command. Permissions are dictated by the user that runs the server.
 
-Or use it as a library:
+This tool does not yet implement comprehensive security measures, so treat it with caution.
 
-```javascript
-import { initializeServer } from 'vscode-context-mcp';
+## Integration with AI Assistants
 
-const server = await initializeServer(['/path/to/allowed/directory']);
-// Use the server...
-```
+This MCP server is designed to work with Model Context Protocol compatible AI assistants. It enhances their ability to:
 
-## Available Tools
+- Understand your code context
+- Make informed suggestions
+- Provide relevant examples
+- Help debug issues
+- Perform file operations on your behalf
 
-The server provides the following tools:
+### Using with Claude Desktop
 
-- `read_file`: Read the contents of a file
-- `read_multiple_files`: Read the contents of multiple files
-- `write_file`: Create or overwrite a file
-- `edit_file`: Make line-based edits to a text file
-- `create_directory`: Create a directory structure
-- `list_directory`: List files in a directory
-- `directory_tree`: Get a recursive view of files and directories
-- `move_file`: Move or rename files and directories
-- `search_files`: Find files matching a pattern
-- `get_file_info`: Get file metadata
-- `list_allowed_directories`: List the accessible directories
+1. Clone the project:
+   ```bash
+   git clone https://github.com/yourusername/vscode-context-mcp.git
+   cd vscode-context-mcp
+   ```
 
-## Security
+2. Install dependencies and build:
+   ```bash
+   npm install
+   npm run build
+   ```
 
-This server implements several security features:
+3. Add the MCP server to your Claude Desktop configuration:
+   
+   Locate your `claude_desktop_config.json` file (typically in `%APPDATA%\Claude\` on Windows) and add the following configuration:
 
-- Path validation to prevent directory traversal attacks
-- Symlink resolution to prevent escaping allowed directories
-- Parent directory validation for new files
+   ```json
+   {
+     "mcpServers": {
+       "vscode-context-mpc": {
+         "command": "node",
+         "args": [
+           "C:\\Projects\\vscode-context-mcp\\dist\\index.js"
+         ]
+       }
+     }
+   }
+   ```
+
+   **Note:** Make sure to update the path to match your actual project location.
+
+## Tool Reference
+
+| Tool Name | Description |
+|-----------|-------------|
+| `get_vscode_context` | Retrieve complete VSCode context information |
+| `get_project_path` | Get current project root directory |
+| `get_current_file` | Get details and content of the active file |
+| `get_open_tabs` | List all open editor tabs |
+| `get_problems` | Retrieve diagnostics (errors/warnings) |
+| `get_terminal_content` | Get terminal output and history |
+| `run_command` | Execute a shell command |
+| `read_file` | Read contents of a file |
+| `read_multiple_files` | Read multiple files at once |
+| `write_file` | Create or overwrite a file |
+| `edit_file` | Make line-based edits to a file |
+| `create_directory` | Create directory structure |
+| `list_directory` | List files and directories |
+| `directory_tree` | Get recursive directory structure |
+| `move_file` | Move or rename files and directories |
+| `search_files` | Find files matching a pattern |
+| `get_file_info` | Get detailed file metadata |
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the LICENSE file for details.

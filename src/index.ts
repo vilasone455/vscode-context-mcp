@@ -12,14 +12,10 @@ import {
 } from "./security/pathValidation.js";
 import { getToolsList, handleToolCall } from "./tools/index.js";
 
-// Command line argument parsing
-const args = process.argv.slice(2);
-// if (args.length === 0) {
-//   console.error("Usage: mcp-server-filesystem <allowed-directory> [additional-directories...]");
-// }
 
-// Store expanded directories
-const expandedDirectories = args.map(dir => expandHome(dir));
+const expandedDirectories : string[] = [];
+
+console.error("Disallowed directories:", expandedDirectories);
 
 // Initialize server
 async function initializeServer() {
