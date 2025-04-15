@@ -24,6 +24,46 @@ export function getToolsList() {
       inputSchema: zodToJsonSchema(schemas.InitChatArgsSchema) as ToolInput,
     },
     {
+      name: "get_project_path",
+      description:
+        "Retrieve the current VS Code project path. " +
+        "This returns the root directory of the currently open project or workspace. " +
+        "Useful for understanding the project structure and file organization.",
+      inputSchema: zodToJsonSchema(schemas.ProjectPathArgsSchema) as ToolInput,
+    },
+    {
+      name: "get_current_file",
+      description:
+        "Retrieve details of the currently active file in VS Code. " +
+        "Returns information such as the file path, language, content, and more. " +
+        "Useful for analyzing or making changes to the file the user is currently focused on.",
+      inputSchema: zodToJsonSchema(schemas.CurrentFileArgsSchema) as ToolInput,
+    },
+    {
+      name: "get_open_tabs",
+      description:
+        "Retrieve a list of all open tabs/editors in VS Code. " +
+        "Shows which files the user currently has open in their editor. " +
+        "Helpful for understanding the user's current working context.",
+      inputSchema: zodToJsonSchema(schemas.OpenTabsArgsSchema) as ToolInput,
+    },
+    {
+      name: "get_problems",
+      description:
+        "Retrieve diagnostic problems (errors/warnings) in the workspace. " +
+        "Shows compilation errors, linter warnings, and other issues detected by VS Code. " +
+        "Useful for helping users debug their code or improve code quality.",
+      inputSchema: zodToJsonSchema(schemas.ProblemsArgsSchema) as ToolInput,
+    },
+    {
+      name: "get_terminal_content",
+      description:
+        "Retrieve content of the VS Code terminal. " +
+        "Shows the output and command history from the integrated terminal. " +
+        "Helpful for understanding build errors, execution outputs, and previous commands.",
+      inputSchema: zodToJsonSchema(schemas.TerminalContentArgsSchema) as ToolInput,
+    },
+    {
       name: "read_file",
       description:
         "Read the complete contents of a file from the file system. " +
@@ -212,12 +252,65 @@ export async function handleToolCall(name: string, args: any) {
         return { content: [{ type: "text", text: info }] };
       }
 
-
-
       case "get_vscode_context": {
         const context = await vsCodeTools.getVsCodeSession();
         return {
           content: [{ type: "text", text: JSON.stringify(context, null, 2) }],
+        };
+      }
+
+      case "get_project_path": {
+        const parsed = schemas.ProjectPathArgsSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for get_project_path: ${parsed.error}`);
+        }
+        const projectPath = await vsCodeTools.getProjectPath();
+        return {
+          content: [{ type: "text", text: JSON.stringify(projectPath, null, 2) }],
+        };
+      }
+
+      case "get_current_file": {
+        const parsed = schemas.CurrentFileArgsSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for get_current_file: ${parsed.error}`);
+        }
+        const currentFile = await vsCodeTools.getCurrentFile();
+        return {
+          content: [{ type: "text", text: JSON.stringify(currentFile, null, 2) }],
+        };
+      }
+
+      case "get_open_tabs": {
+        const parsed = schemas.OpenTabsArgsSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for get_open_tabs: ${parsed.error}`);
+        }
+        const openTabs = await vsCodeTools.getOpenTabs();
+        return {
+          content: [{ type: "text", text: JSON.stringify(openTabs, null, 2) }],
+        };
+      }
+
+      case "get_problems": {
+        const parsed = schemas.ProblemsArgsSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for get_problems: ${parsed.error}`);
+        }
+        const problems = await vsCodeTools.getProblems();
+        return {
+          content: [{ type: "text", text: JSON.stringify(problems, null, 2) }],
+        };
+      }
+
+      case "get_terminal_content": {
+        const parsed = schemas.TerminalContentArgsSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for get_terminal_content: ${parsed.error}`);
+        }
+        const terminalContent = await vsCodeTools.getTerminalContent();
+        return {
+          content: [{ type: "text", text: JSON.stringify(terminalContent, null, 2) }],
         };
       }
 

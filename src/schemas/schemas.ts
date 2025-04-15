@@ -3,6 +3,12 @@ import { z } from "zod";
 export const InitChatArgsSchema = z.object({
 });
 
+// VSCode tools schemas
+export const ProjectPathArgsSchema = z.object({});
+export const CurrentFileArgsSchema = z.object({});
+export const OpenTabsArgsSchema = z.object({});
+export const ProblemsArgsSchema = z.object({});
+export const TerminalContentArgsSchema = z.object({});
 
 export const ReadFileArgsSchema = z.object({
   path: z.string(),
