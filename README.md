@@ -54,22 +54,17 @@ This MCP server is designed to work with Model Context Protocol compatible AI as
 
 ### Using with Claude Desktop
 
-1. Clone the project:
-   ```bash
-   git clone https://github.com/yourusername/vscode-context-mcp.git
-   cd vscode-context-mcp
-   ```
+1. Install the VSCode Extension:
+   - Download the VSIX package from [here](https://github.com/vilasone455/vscode-context-mcp/releases/latest/download/vscode-context-mcp.vsix)
+   - Open VSCode
+   - Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS) to open the command palette
+   - Type "Extensions: Install from VSIX..." and select the command
+   - Navigate to the downloaded VSIX file and select it
+   - Restart VSCode after installation
+   - For more information about the extension, visit the [VSCode extension repository](https://github.com/vilasone455/vscode-context-mcp-extension)
 
-2. Install dependencies and build:
-   ```bash
-   npm install
-   npm run build
-   ```
-
-3. Add the MCP server to your Claude Desktop configuration:
+2. Add the MCP server to your Claude Desktop configuration:
    
-   Locate your `claude_desktop_config.json` file (typically in `%APPDATA%\Claude\` on Windows) and add the following configuration:
-
    ```json
    {
      "mcpServers": {
@@ -84,6 +79,21 @@ This MCP server is designed to work with Model Context Protocol compatible AI as
    ```
 
    **Note:** Make sure to update the path to match your actual project location.
+
+3. Example prompt to test the connection:
+   
+   Once you have everything set up, you can test if Claude can access your VSCode context with a prompt like:
+   
+   ```
+   Please check my current VSCode project and tell me what files I have open.
+   ```
+
+4. How to add files to context:
+   
+   To add specific files to your conversation context with Claude:
+   - Press `Ctrl+L` (Windows/Linux) or `Cmd+L` (macOS) to add the current file to Claude context
+   - Press `Ctrl+I` (Windows/Linux) or `Cmd+I` (macOS) to add the selected text to Claude context
+   - You can also use the VSCode Command Palette (`Ctrl+Shift+P`) and search for "Add File to Context" or ">Add Selection to Context"
 
 ## Tool Reference
 
