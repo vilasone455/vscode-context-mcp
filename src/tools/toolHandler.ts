@@ -25,6 +25,14 @@ export function getToolsList() {
       inputSchema: zodToJsonSchema(schemas.InitChatArgsSchema) as ToolInput,
     },
     {
+      name: "get_attached_files",
+      description:
+        "Retrieve a list of files attached to the VS Code workspace. " +
+        "Returns information about files that are currently attached or linked to the workspace. " +
+        "Useful for understanding external file dependencies and workspace configuration.",
+      inputSchema: zodToJsonSchema(schemas.AttachedFilesArgsSchema) as ToolInput,
+    },
+    {
       name: "get_project_path",
       description:
         "Retrieve the current VS Code project path. " +
@@ -179,6 +187,11 @@ export async function handleToolCall(name: string, args: any) {
         }
         const content = await fileTools.readFile(parsed.data.path);
         return { content: [{ type: "text", text: content }] };
+      }
+
+      case "get_attached_files" : {
+        const content = await vsCodeTools.getAttachedFiles();
+        return { content: [{ type: "text", text: JSON.stringify(content, null, 2)  }] };
       }
 
       case "read_multiple_files": {
