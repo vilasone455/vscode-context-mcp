@@ -54,7 +54,7 @@ This MCP server is designed to work with Model Context Protocol-compatible AI as
 
 ### 1. Install the VSCode Extension
 
-- Download the VSIX package from [here](https://github.com/vilasone455/vscode-context-mcp-extension/releases/download/1.0.0/vscode-context-mcp-extension-1.0.0.vsix)
+- Download the VSIX package from [here](https://github.com/vilasone455/vscode-context-mcp-extension/releases/download/1.0.1/vscode-context-mcp-extension-1.0.1.vsix)
 - Open VSCode
 - Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS) to open the command palette
 - Type **"Extensions: Install from VSIX..."** and select it
