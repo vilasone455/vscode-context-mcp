@@ -20,6 +20,7 @@ This allows AI assistants to provide more relevant and context-aware help for so
 - List open editor tabs
 - Access diagnostic problems (warnings/errors)
 - Retrieve terminal output
+- Access files attached to the workspace
 
 ### Filesystem Operations
 - Read/write files
@@ -89,6 +90,7 @@ This MCP server is designed to work with Model Context Protocol compatible AI as
 | Tool Name | Description |
 |-----------|-------------|
 | `get_vscode_context` | Retrieve complete VSCode context information |
+| `get_attached_files` | Retrieve a list of files attached to the VS Code workspace |
 | `get_project_path` | Get current project root directory |
 | `get_current_file` | Get details and content of the active file |
 | `get_open_tabs` | List all open editor tabs |
