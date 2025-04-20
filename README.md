@@ -131,6 +131,12 @@ You can add files to your Claude context in a few ways:
 | `search_files`       | Find files matching a pattern                |
 | `get_file_info`      | Get detailed file metadata                   |
 
+## Roadmap
+
+1. Make support for multiple VSCode projects
+2. Accept/Revert functionality when writing or editing files
+3. Redesign UI
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
