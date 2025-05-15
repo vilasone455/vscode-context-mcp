@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vilasone455-vscode-context-mcp-badge.png)](https://mseep.ai/app/vilasone455-vscode-context-mcp)
+
 # VSCode Context MCP
 
 A Model Context Protocol (MCP) server that provides VSCode context and filesystem operations for AI assistants.
