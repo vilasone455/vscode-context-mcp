@@ -2,35 +2,27 @@ import fs from "fs/promises";
 import path from "path";
 import os from 'os';
 
-// Store disallowed directories
+
 let disallowedDirectories: string[] = [];
 
-/**
- * Initialize disallowed directories
- */
+
 export function initializeDisallowedDirectories(directories: string[]): void {
   disallowedDirectories = directories.map(dir =>
     normalizePath(path.resolve(expandHome(dir)))
   );
 }
 
-/**
- * Get the list of disallowed directories
- */
+
 export function getDisallowedDirectories(): string[] {
   return [...disallowedDirectories];
 }
 
-/**
- * Normalize path to handle platform differences
- */
+
 export function normalizePath(p: string): string {
   return path.normalize(p);
 }
 
-/**
- * Expand ~ to user's home directory
- */
+
 export function expandHome(filepath: string): string {
   if (filepath.startsWith('~/') || filepath === '~') {
     return path.join(os.homedir(), filepath.slice(1));
@@ -38,10 +30,7 @@ export function expandHome(filepath: string): string {
   return filepath;
 }
 
-/**
- * Validate that a path is NOT within disallowed directories
- * Returns the validated absolute path if valid, throws error if invalid
- */
+
 export async function validatePath(requestedPath: string): Promise<string> {
   const expandedPath = expandHome(requestedPath);
   const absolute = path.isAbsolute(expandedPath)
@@ -50,14 +39,14 @@ export async function validatePath(requestedPath: string): Promise<string> {
 
   const normalizedRequested = normalizePath(absolute);
 
-  // Check if path is inside any disallowed directory
   const isDisallowed = disallowedDirectories.some(dir => normalizedRequested.startsWith(dir));
+
   if (isDisallowed) {
     throw new Error(`Access denied - path is inside a disallowed directory: ${absolute}`);
   }
 
-  // Handle symlinks by checking their real path
   try {
+
     const realPath = await fs.realpath(absolute);
     const normalizedReal = normalizePath(realPath);
     const isRealPathDisallowed = disallowedDirectories.some(dir => normalizedReal.startsWith(dir));
@@ -66,7 +55,7 @@ export async function validatePath(requestedPath: string): Promise<string> {
     }
     return realPath;
   } catch (error) {
-    // For new files that don't exist yet, verify parent directory
+
     const parentDir = path.dirname(absolute);
     try {
       const realParentPath = await fs.realpath(parentDir);
@@ -82,9 +71,7 @@ export async function validatePath(requestedPath: string): Promise<string> {
   }
 }
 
-/**
- * Validate disallowed directories at startup
- */
+
 export async function validateDirectories(directories: string[]): Promise<void> {
   await Promise.all(directories.map(async (dir) => {
     try {

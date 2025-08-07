@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { validatePath } from "../../security/pathValidation.js";
-import { TreeEntry } from "../../schemas/schemas.js";
+import { FlatTreeData } from "../../schemas/schemas.js";
 import { minimatch } from 'minimatch';
 // Not importing readFile since we need to validate paths ourselves
 
@@ -57,9 +57,9 @@ export async function listDirectory(dirPath: string): Promise<string> {
 }
 
 /**
- * Get recursive directory tree, respecting .gitignore
+ * Get flattened directory tree, respecting .gitignore and ignoreFolders
  */
-export async function directoryTree(dirPath: string): Promise<string> {
+export async function directoryTree(dirPath: string, ignoreFolders: string[] = []): Promise<string> {
   // Parse initial .gitignore file at the root
   const gitignorePath = path.join(dirPath, '.gitignore');
   const rootGitignorePatterns = await parseGitignore(gitignorePath);
@@ -68,10 +68,34 @@ export async function directoryTree(dirPath: string): Promise<string> {
   const gitignoreCache = new Map<string, string[]>();
   gitignoreCache.set(dirPath, rootGitignorePatterns);
   
-  async function buildTree(currentPath: string, parentGitignorePatterns: string[] = []): Promise<TreeEntry[]> {
+  // Smart filtering: ignore verbose hidden directories but keep useful ones
+  const ignoredHiddenDirs = ['.git', '.DS_Store', '.idea'];
+  
+  // Convert ignoreFolders to patterns for matching
+  const ignoreFolderPatterns = ignoreFolders.map(folder => {
+    // Normalize path separators
+    const normalizedFolder = folder.replace(/\\/g, '/');
+    
+    // If it starts with ./ remove it
+    const cleanFolder = normalizedFolder.startsWith('./') ? normalizedFolder.slice(2) : normalizedFolder;
+    
+    // If it doesn't contain wildcards, create patterns to match both the directory and its contents
+    if (!cleanFolder.includes('*') && !cleanFolder.includes('?')) {
+      const baseName = cleanFolder.endsWith('/') ? cleanFolder.slice(0, -1) : cleanFolder;
+      // Return the base pattern that will match the directory itself
+      return baseName;
+    }
+    
+    // If it already has wildcards, use as-is
+    return cleanFolder;
+  });
+  
+  const directories: string[] = [];
+  const files: string[] = [];
+  
+  async function traverse(currentPath: string, parentGitignorePatterns: string[] = []) {
     const validPath = await validatePath(currentPath);
     const entries = await fs.readdir(validPath, { withFileTypes: true });
-    const result: TreeEntry[] = [];
     
     // Get patterns from parent directories plus any in this directory
     let currentGitignorePatterns = [...parentGitignorePatterns];
@@ -95,31 +119,46 @@ export async function directoryTree(dirPath: string): Promise<string> {
       const relativePath = path.relative(dirPath, entryPath);
       
       // Check if this entry should be excluded by .gitignore patterns
-      const shouldExclude = currentGitignorePatterns.some(pattern => {
+      const shouldExcludeByGitignore = currentGitignorePatterns.some(pattern => {
         return minimatch(relativePath, pattern, { dot: true, matchBase: true });
       });
       
-      if (shouldExclude) {
+      // Check if this entry should be excluded by ignoreFolders patterns
+      const shouldExcludeByIgnoreFolders = ignoreFolderPatterns.some(pattern => {
+        // Check both the relative path and just the entry name
+        return minimatch(relativePath, pattern, { dot: true, matchBase: true }) ||
+               minimatch(entry.name, pattern, { dot: true, matchBase: true });
+      });
+      
+      if (shouldExcludeByGitignore || shouldExcludeByIgnoreFolders) {
         continue;
       }
       
-      const entryData: TreeEntry = {
-        name: entry.name,
-        type: entry.isDirectory() ? 'directory' : 'file'
-      };
-
-      if (entry.isDirectory()) {
-        entryData.children = await buildTree(entryPath, currentGitignorePatterns);
+      // Smart filtering: completely skip verbose hidden directories
+      if (entry.isDirectory() && ignoredHiddenDirs.includes(entry.name)) {
+        continue; // Skip both adding to list and traversing
       }
-
-      result.push(entryData);
+      
+      if (entry.isDirectory()) {
+        // Add directory with trailing slash
+        directories.push(relativePath + '/');
+        // Recursively traverse subdirectories  
+        await traverse(entryPath, currentGitignorePatterns);
+      } else {
+        // Add file with its relative path
+        files.push(relativePath);
+      }
     }
-
-    return result;
   }
 
-  const treeData = await buildTree(dirPath, rootGitignorePatterns);
-  return JSON.stringify(treeData, null, 2);
+  await traverse(dirPath, rootGitignorePatterns);
+  
+  const result: FlatTreeData = {
+    d: directories.sort(),
+    f: files.sort()
+  };
+  
+  return JSON.stringify(result, null, 2);
 }
 
 /**
@@ -128,7 +167,8 @@ export async function directoryTree(dirPath: string): Promise<string> {
 export async function searchFiles(
   rootPath: string,
   pattern: string,
-  excludePatterns: string[] = []
+  excludePatterns: string[] = [],
+  ignoreFolders: string[] = []
 ): Promise<string> {
   const results: string[] = [];
   
@@ -136,8 +176,27 @@ export async function searchFiles(
   const gitignorePath = path.join(rootPath, '.gitignore');
   const gitignorePatterns = await parseGitignore(gitignorePath);
   
-  // Combine user-provided exclude patterns with .gitignore patterns
-  const allExcludePatterns = [...excludePatterns, ...gitignorePatterns];
+  // Convert ignoreFolders to patterns for matching
+  const ignoreFolderPatterns = ignoreFolders.map(folder => {
+    // Normalize path separators
+    const normalizedFolder = folder.replace(/\\/g, '/');
+    
+    // If it starts with ./ remove it
+    const cleanFolder = normalizedFolder.startsWith('./') ? normalizedFolder.slice(2) : normalizedFolder;
+    
+    // If it doesn't contain wildcards, create patterns to match both the directory and its contents
+    if (!cleanFolder.includes('*') && !cleanFolder.includes('?')) {
+      const baseName = cleanFolder.endsWith('/') ? cleanFolder.slice(0, -1) : cleanFolder;
+      // Return the base pattern that will match the directory itself
+      return baseName;
+    }
+    
+    // If it already has wildcards, use as-is
+    return cleanFolder;
+  });
+  
+  // Combine user-provided exclude patterns with .gitignore patterns and ignoreFolders
+  const allExcludePatterns = [...excludePatterns, ...gitignorePatterns, ...ignoreFolderPatterns];
 
   // Cache for .gitignore patterns found in subdirectories
   const gitignoreCache = new Map<string, string[]>();
@@ -172,6 +231,17 @@ export async function searchFiles(
 
         // Check if path matches any exclude pattern
         const relativePath = path.relative(rootPath, fullPath);
+        
+        // Check if this entry should be excluded by ignoreFolders patterns
+        const shouldExcludeByIgnoreFolders = ignoreFolderPatterns.some(pattern => {
+          // Check both the relative path and just the entry name
+          return minimatch(relativePath, pattern, { dot: true, matchBase: true }) ||
+                 minimatch(entry.name, pattern, { dot: true, matchBase: true });
+        });
+        
+        if (shouldExcludeByIgnoreFolders) {
+          continue;
+        }
         
         // Convert user patterns to the right format
         const formattedUserPatterns = excludePatterns.map(pattern => 

@@ -4,11 +4,29 @@ import { validatePath } from "../../security/pathValidation.js";
 /**
  * Read a single file
  */
-export async function readFile(filePath: string): Promise<string> {
-  const validPath = await validatePath(filePath);
-  return await fs.readFile(validPath, "utf-8");
-}
+export async function readFile(filePath: string, showLineNumbers: boolean = false): Promise<string> {
+  try {
+    const validPath = await validatePath(filePath);
+    const content = await fs.readFile(validPath, "utf-8");
 
+    if (!showLineNumbers) {
+      return content;
+    }
+
+    // Add line numbers
+    const lines = content.split('\n');
+    const lineNumberWidth = lines.length.toString().length;
+
+    const numberedLines = lines.map((line, index) => {
+      const lineNumber = (index + 1).toString().padStart(lineNumberWidth, ' ');
+      return `${lineNumber}: ${line}`;
+    });
+
+    return numberedLines.join('\n');
+  } catch (error) {
+    throw error;
+  }
+}
 /**
  * Read multiple files
  */
