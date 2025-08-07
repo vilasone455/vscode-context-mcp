@@ -87,7 +87,8 @@ export function getToolsList() {
         "Read the complete contents of a file from the file system. " +
         "Handles various text encodings and provides detailed error messages " +
         "if the file cannot be read. Use this tool when you need to examine " +
-        "the contents of a single file. Only works within allowed directories.",
+        "the contents of a single file. Set showLineNumbers=true to display " +
+        "line numbers for easier line-based editing. Only works within allowed directories.",
       inputSchema: zodToJsonSchema(schemas.ReadFileArgsSchema) as ToolInput,
     },
     {
@@ -109,12 +110,15 @@ export function getToolsList() {
       inputSchema: zodToJsonSchema(schemas.WriteFileArgsSchema) as ToolInput,
     },
     {
-      name: "edit_file",
+      name: "modify_file",
       description:
-        "Make line-based edits to a text file. Each edit replaces exact line sequences " +
-        "with new content. Returns a git-style diff showing the changes made. " +
-        "Only works within allowed directories.",
-      inputSchema: zodToJsonSchema(schemas.EditFileArgsSchema) as ToolInput,
+        "Modifies a file by applying a list of sequential, structured edits. " +
+        "This is the primary tool for changing file content. " +
+        "Each edit combines an `action_type` (what to do) with a `match_type` (where to do it). " +
+        "Supports matching by line numbers (`line`, `lines`), text (`str`, `regex`), the whole file, or by code structure (`ast`). " +
+        "Use the `list_ast_nodes` tool to identify functions, classes, etc., for `'ast'` matching. " +
+        "All edits are applied sequentially in a single operation.",
+      inputSchema: zodToJsonSchema(schemas.ApplyFileEditsArgsSchema) as ToolInput,
     },
     {
       name: "create_directory",
@@ -137,10 +141,11 @@ export function getToolsList() {
     {
       name: "directory_tree",
       description:
-        "Get a recursive tree view of files and directories as a JSON structure. " +
-        "Each entry includes 'name', 'type' (file/directory), and 'children' for directories. " +
-        "Files have no children array, while directories always have a children array (which may be empty). " +
-        "The output is formatted with 2-space indentation for readability. Only works within allowed directories.",
+        "Get a flattened directory tree as a compact JSON structure. " +
+        "Returns an object with 'd' (array of directory paths ending with '/') and 'f' (array of file paths). " +
+        "All paths are relative to the root directory. This format is highly compact and AI-friendly. " +
+        "Only works within allowed directories and respects .gitignore patterns. " +
+        "Supports optional ignoreFolders parameter to exclude specific folder paths.",
       inputSchema: zodToJsonSchema(schemas.DirectoryTreeArgsSchema) as ToolInput,
     },
     {
@@ -159,7 +164,7 @@ export function getToolsList() {
         "Searches through all subdirectories from the starting path. The search " +
         "is case-insensitive and matches partial names. Returns full paths to all " +
         "matching items. Great for finding files when you don't know their exact location. " +
-        "Only searches within allowed directories.",
+        "Only searches within allowed directories. Supports excludePatterns and ignoreFolders parameters.",
       inputSchema: zodToJsonSchema(schemas.SearchFilesArgsSchema) as ToolInput,
     },
     {
@@ -185,13 +190,13 @@ export async function handleToolCall(name: string, args: any) {
         if (!parsed.success) {
           throw new Error(`Invalid arguments for read_file: ${parsed.error}`);
         }
-        const content = await fileTools.readFile(parsed.data.path);
+        const content = await fileTools.readFile(parsed.data.path, parsed.data.showLineNumbers);
         return { content: [{ type: "text", text: content }] };
       }
 
-      case "get_attached_files" : {
+      case "get_attached_files": {
         const content = await vsCodeTools.getAttachedFiles();
-        return { content: [{ type: "text", text: JSON.stringify(content, null, 2)  }] };
+        return { content: [{ type: "text", text: JSON.stringify(content, null, 2) }] };
       }
 
       case "read_multiple_files": {
@@ -212,12 +217,21 @@ export async function handleToolCall(name: string, args: any) {
         return { content: [{ type: "text", text: message }] };
       }
 
-      case "edit_file": {
-        const parsed = schemas.EditFileArgsSchema.safeParse(args);
+      // case "edit_file": {
+      //   const parsed = schemas.EditFileArgsSchema.safeParse(args);
+      //   if (!parsed.success) {
+      //     throw new Error(`Invalid arguments for edit_file: ${parsed.error}`);
+      //   }
+      //   const result = await fileTools.editFile(parsed.data.path, parsed.data.edits, parsed.data.dryRun);
+      //   return { content: [{ type: "text", text: result }] };
+      // }
+
+      case "modify_file": {
+        const parsed = schemas.ApplyFileEditsArgsSchema.safeParse(args);
         if (!parsed.success) {
-          throw new Error(`Invalid arguments for edit_file: ${parsed.error}`);
+          throw new Error(`Invalid arguments for edit_file_by_lines: ${parsed.error}`);
         }
-        const result = await fileTools.editFile(parsed.data.path, parsed.data.edits, parsed.data.dryRun);
+        const result = await fileTools.editFileByLines(parsed.data.filePath, parsed.data.edits);
         return { content: [{ type: "text", text: result }] };
       }
 
@@ -244,7 +258,7 @@ export async function handleToolCall(name: string, args: any) {
         if (!parsed.success) {
           throw new Error(`Invalid arguments for directory_tree: ${parsed.error}`);
         }
-        const treeJson = await fileTools.directoryTree(parsed.data.path);
+        const treeJson = await fileTools.directoryTree(parsed.data.path, parsed.data.ignoreFolders);
         return { content: [{ type: "text", text: treeJson }] };
       }
 
@@ -262,7 +276,7 @@ export async function handleToolCall(name: string, args: any) {
         if (!parsed.success) {
           throw new Error(`Invalid arguments for search_files: ${parsed.error}`);
         }
-        const results = await fileTools.searchFiles(parsed.data.path, parsed.data.pattern, parsed.data.excludePatterns);
+        const results = await fileTools.searchFiles(parsed.data.path, parsed.data.pattern, parsed.data.excludePatterns, parsed.data.ignoreFolders);
         return { content: [{ type: "text", text: results }] };
       }
 
@@ -343,7 +357,7 @@ export async function handleToolCall(name: string, args: any) {
           throw new Error(`Invalid arguments for run_command: ${parsed.error}`);
         }
         const result = await commandTools.runCommand(parsed.data.command, parsed.data.workingDir);
-        
+
         let outputText = "";
         if (result.stdout) {
           outputText += `STDOUT:\n${result.stdout}\n\n`;
@@ -352,7 +366,7 @@ export async function handleToolCall(name: string, args: any) {
           outputText += `STDERR:\n${result.stderr}\n\n`;
         }
         outputText += `Exit Code: ${result.exitCode}\n`;
-        
+
         return {
           content: [{ type: "text", text: outputText }],
           isError: result.exitCode !== 0
